@@ -1,0 +1,191 @@
+using UnityEngine;
+using UnityEngine.UI;
+using System.Collections;
+
+public class PlayerScript : MonoBehaviour {
+	
+	public float speed;
+	Vector2 movement;
+	float hori;
+	float verti;
+	public bool isWhite = true;
+	public bool isBlack;
+	float decreaseValue = 0.05f;
+	float time;
+	int score;
+	int highScore;
+
+	public Renderer myRend;
+	public ParticleSystem myTrail;
+	public ParticleSystem myTransition;
+	public AudioSource transitionSound;
+	public Renderer haloRend;
+	public Text scoreText;
+	public Text timeText;
+	public Text endScoreText;
+	public Text highScoreText;
+	public GameObject obstacleSpawner;
+	public Transform startPos;
+	public GameObject gameManager;
+	public Animator finishScreen;
+	public Button restartButt;
+
+	
+	private Rigidbody2D rb;
+	
+	void Start ()
+	{
+		isBlack = false;
+		score = 0;
+		rb = GetComponent<Rigidbody2D>();
+		rb.isKinematic = false;
+		Physics2D.IgnoreLayerCollision (10, 9, true);
+		time = 0;
+	}
+	
+	void Update ()
+	{
+		if (GM.alive) {
+
+			float widthRel = this.transform.localScale.x / (Screen.width); //relative width
+			float heightRel = this.transform.localScale.y / (Screen.height); //relative height
+		
+			Vector3 viewPos = Camera.main.WorldToViewportPoint (this.transform.position);
+			viewPos.x = Mathf.Clamp (viewPos.x, widthRel, 1 - widthRel);
+			viewPos.y = Mathf.Clamp (viewPos.y, heightRel, 1 - heightRel);
+			this.transform.position = Camera.main.ViewportToWorldPoint (viewPos);
+
+			hori = Input.GetAxis ("Horizontal") / 5;
+			verti = Input.GetAxis ("Vertical") / 5;
+		
+			Vector2 movement = new Vector2 (hori, verti);
+
+			rb.velocity = movement*50;
+
+
+			if (Input.GetButtonDown ("Switch")) {
+				print ("Switch");
+				if (isWhite) {
+					transitionSound.Stop ();
+					transitionSound.pitch = (Random.Range (.85f, 1.25f));
+					transitionSound.Play ();
+					myTransition.Clear ();
+					myTransition.startColor = Color.black;
+					myTransition.Play ();
+					myRend.material.SetColor ("_Color", Color.black);
+					myRend.material.SetColor ("_EmissionColor", Color.black);
+					haloRend.material.SetColor ("_Color", Color.white);
+					haloRend.material.SetColor ("_EmissionColor", Color.white);
+					myTrail.startColor = Color.black;
+					Physics2D.IgnoreLayerCollision (10, 9, false);
+					Physics2D.IgnoreLayerCollision (10, 8, true);
+					gameObject.layer = 10;
+					isWhite = false;
+					isBlack = true;
+				} else {
+					transitionSound.Stop ();
+					transitionSound.pitch = (Random.Range (.85f, 1.25f));
+					transitionSound.Play ();
+					myTransition.Clear ();
+					myTransition.startColor = Color.white;
+					myTransition.Play ();
+					myRend.material.SetColor ("_Color", Color.white);
+					myRend.material.SetColor ("_EmissionColor", Color.white);
+					haloRend.material.SetColor ("_Color", Color.black);
+					haloRend.material.SetColor ("_EmissionColor", Color.black);
+					myTrail.startColor = Color.white;
+					Physics2D.IgnoreLayerCollision (10, 8, false);
+					Physics2D.IgnoreLayerCollision (10, 9, true);
+					gameObject.layer = 10;
+					isWhite = true;
+					isBlack = false;
+		
+				}
+			}
+		}
+
+		scoreText.text = score.ToString("f0");
+		timeText.text = time.ToString ("f2");
+		endScoreText.text = "Score:\n" + score;
+
+		if (GM.gameOver) {
+
+			transform.position = Vector2.Lerp(transform.position,startPos.position,0.1f);
+
+		}
+
+		if (GM.alive) {
+
+			time += Time.deltaTime;
+
+		}
+
+	}	
+
+	public void orbCollected(){
+
+		score ++;
+
+	}
+
+	void OnCollisionEnter2D(Collision2D c){
+
+			Restart();
+
+	}
+
+	void Restart(){
+
+		StartCoroutine (buttonWait());
+		GM.buttPress = false;
+		finishScreen.SetTrigger ("ScreenIn");
+		StartCoroutine (disableSpawner ());
+		GetComponent<CircleCollider2D>().enabled = false;
+		GM.alive = false;
+		GM.gameOver = true;
+		GM.refreshed = false;
+
+	}
+
+	public IEnumerator PlayerRefresh(){
+		GetComponent<CircleCollider2D>().enabled = true;
+		finishScreen.SetTrigger ("ScreenOut");
+		GM.alive = true;
+		rb.isKinematic = false;
+		isBlack = false;
+		score = 0;
+		Physics2D.IgnoreLayerCollision (10, 9, true);
+		Physics2D.IgnoreLayerCollision (10, 8, false);
+		time = 0;
+		myTransition.Clear ();
+		myTransition.startColor = Color.white;
+		myTransition.Play ();
+		myRend.material.SetColor ("_Color", Color.white);
+		myRend.material.SetColor ("_EmissionColor", Color.white);
+		isWhite = true;
+		haloRend.material.SetColor ("_Color", Color.black);
+		haloRend.material.SetColor ("_EmissionColor", Color.black);
+		myTrail.startColor = Color.white;
+		yield return new WaitForSeconds(3f);
+		finishScreen.SetTrigger ("AnimComplete");
+		obstacleSpawner.GetComponent<ObstacleSpawner> ().spawnObstacle ();
+
+	}
+
+	IEnumerator disableSpawner(){
+
+		yield return new WaitForSeconds (2);
+		obstacleSpawner.SetActive (false);
+
+	}
+
+	IEnumerator buttonWait(){
+
+		restartButt.interactable = false;
+		yield return new WaitForSeconds (2);
+		restartButt.interactable = true;
+
+	}
+
+
+}
