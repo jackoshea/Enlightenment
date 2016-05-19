@@ -1,0 +1,61 @@
+using UnityEngine;
+using System.Collections;
+
+public class Obstacle : MonoBehaviour {
+	
+	public Transform startPos;
+	public Transform top;
+	public Transform[] pickUpSpots;
+	public GameObject masterPickup;
+
+	// Use this for initialization
+	
+	void OnEnable () {
+		print (name);
+		top = transform.FindChild ("Top").transform;
+		transform.position = startPos.position; 
+		StartCoroutine (moveDown ());
+
+		distributePickups ();
+
+	}
+	
+	IEnumerator moveDown(){
+
+		while (top.position.y > 5) {
+
+			transform.Translate(0,GM.fallSpeed/50,0);
+			yield return null;
+
+		}
+		print ("spawn");
+		startPos.gameObject.GetComponent<ObstacleSpawner> ().spawnObstacle ();
+		//yield return new WaitForSeconds(2);
+		while (top.position.y > -10) {
+			
+			transform.Translate(0,GM.fallSpeed/50,0);
+			yield return null;
+			
+		}
+		gameObject.SetActive(false);
+
+	}
+
+	void distributePickups(){
+
+		for (int i = 0; i<pickUpSpots.Length; i++) {
+
+			int o = Random.Range(1,4);
+
+			if(o == 2){
+
+				GameObject newPickup = Instantiate(masterPickup,pickUpSpots[i].transform.position,Quaternion.identity) as GameObject;
+				newPickup.transform.parent = transform;
+				newPickup.GetComponent<SpriteRenderer>().sortingOrder = 10;
+
+			}
+
+		}
+
+	}
+}
